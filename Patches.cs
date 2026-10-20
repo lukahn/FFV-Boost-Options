@@ -4,7 +4,7 @@ using Last.Management;
 using Last.UI;
 using Il2CppStringList = Il2CppSystem.Collections.Generic.List<string>;
 
-namespace FF5BoostOptions;
+namespace FFVBoostOptions;
 
 internal static class BoostMenuHooks
 {

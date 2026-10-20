@@ -13,6 +13,8 @@ Vanilla offers `0x`, `0.5x`, `1x`, `2x`, `4x`. With this mod every boost row bec
 0x, 0.5x, 1x, 2x, 3x, 4x, 5x, ... up to MaxMultiplier
 ```
 
+![FINAL FANTASY V's Boost menu with the EXP, Gil and ABP multipliers set to 99x](boosts.png)
+
 It applies to the EXP, Gil, ABP and the other rate-based boost rows the game hides behind
 `ConfigCommandType.*Rate`. Booleans (encounters, HP growth) are untouched.
 
@@ -30,7 +32,7 @@ It applies to the EXP, Gil, ABP and the other rate-based boost rows the game hid
 dotnet build -c Release -p:DeployToPlugins=true
 ```
 
-That copies `FF5BoostOptions.dll` into `BepInEx/plugins`. Without `-p:DeployToPlugins=true` the
+That copies `FFVBoostOptions.dll` into `BepInEx/plugins`. Without `-p:DeployToPlugins=true` the
 build output lands in `bin/Release/net6.0/` and can be copied manually.
 
 If your game is not at the default Steam path, override it:
@@ -80,4 +82,4 @@ files are modified.
 
 ## Uninstall
 
-Delete `BepInEx/plugins/FF5BoostOptions.dll` (and optionally the config file above).
+Delete `BepInEx/plugins/FFVBoostOptions.dll` (and optionally the config file above).

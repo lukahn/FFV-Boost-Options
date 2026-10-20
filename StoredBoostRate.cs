@@ -2,7 +2,7 @@ using Last.Data;
 using Last.Management;
 using Last.UI;
 
-namespace FF5BoostOptions;
+namespace FFVBoostOptions;
 
 /// <summary>
 /// Reads the multiplier the game currently has stored for a Boost row.

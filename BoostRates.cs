@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using Last.UI;
 
-namespace FF5BoostOptions;
+namespace FFVBoostOptions;
 
 /// <summary>
 /// The Boost menu builds its options from an index, and the game converts between that index and

@@ -5,7 +5,7 @@ using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 
-namespace FF5BoostOptions;
+namespace FFVBoostOptions;
 
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
 public sealed class BoostOptionsPlugin : BasePlugin

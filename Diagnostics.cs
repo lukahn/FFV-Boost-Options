@@ -2,7 +2,7 @@ using System;
 using Last.UI;
 using HarmonyLib;
 
-namespace FF5BoostOptions;
+namespace FFVBoostOptions;
 
 /// <summary>
 /// Tracing used to map the Boost screen's control flow. Enabled with Debug.VerboseLogging.
