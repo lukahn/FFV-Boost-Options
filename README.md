@@ -24,6 +24,9 @@ It applies to the EXP, Gil, ABP and the other rate-based boost rows the game hid
 * BepInEx 6 (IL2CPP, `6.0.0-be.697` at the time of writing) set up per
   [the usual Pixel Remaster modding guide](https://steamcommunity.com/sharedfiles/filedetails/?id=2788533275)
   - Magicite is not required by this mod
+  - On a Steam Deck or other Linux/Proton setup, see
+    [Steam Deck](#steam-deck-and-other-linuxproton-setups) below — BepInEx needs one extra step
+    there
 * The interop assemblies BepInEx generates on first launch (`BepInEx/interop`)
 
 ## Build and install
@@ -43,6 +46,37 @@ dotnet build -c Release -p:GameDir="D:\Games\FINAL FANTASY V PR" -p:DeployToPlug
 
 The project references the interop assemblies from `$(GameDir)\BepInEx\interop`, so BepInEx must
 have run at least once before the plugin can be compiled.
+
+## Steam Deck (and other Linux/Proton setups)
+
+The Steam build is Windows-only, so on a Steam Deck the game runs through Proton. BepInEx will not
+start unless Proton is told to load the game's own `winhttp.dll`, which is Doorstop's injection
+point. Without that override the game runs normally but BepInEx never initialises: no
+`BepInEx/config`, no `BepInEx/interop`, no `LogOutput.log` — the `BepInEx` folder just keeps the
+stock `core`, `patchers` and `plugins` directories.
+
+1. Install the **Windows x64** BepInEx 6 IL2CPP pack into
+   `.../steamapps/common/FINAL FANTASY V PR`, copying the whole archive. `winhttp.dll`,
+   `doorstop_config.ini`, `.doorstop_version` and the `dotnet` folder belong next to the game
+   executable, alongside `BepInEx/`; copying only the `BepInEx` folder is not enough.
+   * `.doorstop_version` starts with a dot, so Dolphin hides it unless hidden files are enabled.
+   * The folder must be named `BepInEx` exactly — ext4 on the SD card is case-sensitive.
+2. In Steam, open FINAL FANTASY V → **Properties → General → Launch Options** and enter:
+
+   ```
+   WINEDLLOVERRIDES="winhttp=n,b" %command%
+   ```
+
+   This is the step that makes BepInEx load under Proton. If you'd rather not use launch options,
+   the equivalent one-off setup is protontricks → the game → `Select the default wineprefix` →
+   `Run winecfg` → **Libraries** → add `winhttp` → Apply.
+3. Launch the game **from Steam** and leave it at the title screen while BepInEx generates
+   `BepInEx/interop`; the first launch is slow. `BepInEx/LogOutput.log` should appear afterwards.
+4. Copy `FFVBoostOptions.dll` into `BepInEx/plugins` and confirm the log contains
+   `FFV Boost Options ... loaded`.
+
+Build against the same BepInEx build that is installed on the Deck; if the Deck has a different
+BepInEx 6 build, rebuild with that version so the interop assemblies match.
 
 ## Configuration
 
