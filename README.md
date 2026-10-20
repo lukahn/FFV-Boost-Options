@@ -48,6 +48,9 @@ have run at least once before the plugin can be compiled.
 
 `BepInEx/config/com.lukahn.ff5.boostoptions.cfg`
 
+The file is generated automatically the first time the plugin loads; there is nothing to create or
+copy before installing. Edit it (or use a config manager) to change the values below.
+
 | Section | Key | Default | Meaning |
 | --- | --- | --- | --- |
 | `Options` | `MaxMultiplier` | `99` | Highest multiplier shown in the menu |
