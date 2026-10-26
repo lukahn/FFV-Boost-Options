@@ -55,6 +55,11 @@ internal static class Diagnostics
         Verify(typeof(Last.UI.KeyInput.ConfigCommandController), "SetNameText");
         Verify(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetAbpRate");
         Verify(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetAbpRate");
+        Verify(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetExpRate");
+        // The EXP row is applied inline here rather than through SetExpRate(int), so these are the
+        // hooks that actually keep its multiplier.
+        Verify(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SwitchArrowSelectTypeProcess");
+        Verify(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SwitchArrowTypeProcess");
     }
 
     private static void Verify(Type type, string methodName)

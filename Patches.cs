@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using HarmonyLib;
 using Last.Management;
 using Last.UI;
@@ -101,10 +102,46 @@ internal static class BoostMenuHooks
     }
 
     /// <summary>
+    /// Writes a multiplier straight into the game's CheatSettingsClient, which is the only layer
+    /// that stores the value; the menu helpers are just conversions on top of it.
+    /// </summary>
+    public static void SetClientRate(ConfigCommandType type, float rate)
+    {
+        CheatSettingsClient client = CheatSettingsClient.Instance();
+        if (client == null)
+            return;
+
+        switch (type)
+        {
+            case ConfigCommandType.ExpRate:
+                client.SetExpRate(rate);
+                break;
+            case ConfigCommandType.GilRate:
+                client.SetGilRate(rate);
+                break;
+            case ConfigCommandType.AbpRate:
+                client.SetAbpRate(rate);
+                break;
+            case ConfigCommandType.LearningProficiencyRate:
+                client.SetLearningProficiencyRate(rate);
+                break;
+            case ConfigCommandType.MagicProficiencyRate:
+                client.SetMagicProficiencyRate(rate);
+                break;
+            case ConfigCommandType.ParameterUpRate:
+                client.SetParameterUpRate(rate);
+                break;
+            case ConfigCommandType.MagicLearningProficiencyRate:
+                client.SetMagicLearningProficiencyRate(rate);
+                break;
+        }
+    }
+
+    /// <summary>
     /// The game's own Set*Rate(index) helpers keep a private five-entry table and read past its end
     /// for custom indices, silently storing 0. Drive the client directly instead.
     /// </summary>
-    public static bool ApplyRate(ConfigCommandType type, int index, Action<float> setter)
+    public static bool ApplyRate(ConfigCommandType type, int index)
     {
         if (!BoostRates.IsRateCommand(type))
             return true;
@@ -112,7 +149,7 @@ internal static class BoostMenuHooks
         try
         {
             float rate = BoostRates.IndexToRate(index);
-            setter(rate);
+            SetClientRate(type, rate);
 
             if (BoostOptionsPlugin.Verbose.Value)
                 BoostOptionsPlugin.LogSource.LogInfo($"[Boost] {type}: set index {index} -> {rate}x");
@@ -123,6 +160,65 @@ internal static class BoostMenuHooks
         {
             BoostOptionsPlugin.LogSource.LogWarning($"[Boost] {type}: set index {index} failed: {e.Message}");
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Puts the multiplier the row is showing back into the save data once the game has finished
+    /// with an arrow press.
+    /// <para>
+    /// Every rate row except EXP goes through a virtual <c>Set*Rate(int)</c> call that the prefixes
+    /// above can replace. The EXP case is compiled straight into
+    /// <c>ConfigActualDetailsControllerBase.SwitchArrowSelectTypeProcess</c>: the game decodes its
+    /// own five-entry table there and calls <c>CheatSettingsClient.SetExpRate</c> itself, so the
+    /// <c>SetExpRate(int)</c> method the prefix is attached to is never called and an index above 4
+    /// still stores 0. Re-asserting the row's own index afterwards fixes that, and is a no-op for
+    /// the rows that were already stored correctly.
+    /// </para>
+    /// </summary>
+    public static void ApplyStoredRate(ConfigCommandsData data, int index, string what)
+    {
+        if (data == null)
+            return;
+
+        ConfigCommandType type;
+        try
+        {
+            type = data.ConfigCommandType;
+        }
+        catch
+        {
+            return;
+        }
+
+        if (!BoostRates.IsRateCommand(type))
+            return;
+
+        try
+        {
+            float rate = BoostRates.IndexToRate(index);
+
+            float stored;
+            bool hasStored = StoredBoostRate.TryGet(type, out stored);
+            if (hasStored && Math.Abs(stored - rate) < 0.0001f)
+            {
+                if (BoostOptionsPlugin.Verbose.Value)
+                    BoostOptionsPlugin.LogSource.LogInfo($"[Boost] {what} {type}: index {index} already stored as {stored}x");
+                return;
+            }
+
+            SetClientRate(type, rate);
+
+            if (BoostOptionsPlugin.Verbose.Value)
+            {
+                BoostOptionsPlugin.LogSource.LogInfo(
+                    $"[Boost] {what} {type}: index {index} -> {rate}x " +
+                    $"(game had stored {(hasStored ? stored.ToString("0.###", CultureInfo.InvariantCulture) : "?")}x)");
+            }
+        }
+        catch (Exception e)
+        {
+            BoostOptionsPlugin.LogSource.LogWarning($"[Boost] {what} {type}: re-apply index {index} failed: {e.Message}");
         }
     }
 }
@@ -320,101 +416,147 @@ internal static class BoostRatesPatch
 
     // The game's Set*Rate(index) helpers read past the end of their private five-entry table for
     // custom indices and store 0. Route every rate row through the client's own setters instead.
+    // (SetExpRate(int) turns out to be dead code — see KeyInputArrowRate below — but it is patched
+    // anyway so the behaviour stays correct if the game ever calls it.)
     [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetExpRate")]
     private static class KeySetExpRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.ExpRate, index, r => CheatSettingsClient.Instance().SetExpRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.ExpRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetExpRate")]
     private static class TouchSetExpRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.ExpRate, index, r => CheatSettingsClient.Instance().SetExpRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.ExpRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetGilRate")]
     private static class KeySetGilRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.GilRate, index, r => CheatSettingsClient.Instance().SetGilRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.GilRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetGilRate")]
     private static class TouchSetGilRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.GilRate, index, r => CheatSettingsClient.Instance().SetGilRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.GilRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetAbpRate")]
     private static class KeySetAbpRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.AbpRate, index, r => CheatSettingsClient.Instance().SetAbpRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.AbpRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetAbpRate")]
     private static class TouchSetAbpRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.AbpRate, index, r => CheatSettingsClient.Instance().SetAbpRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.AbpRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetLearningProficiencyRate")]
     private static class KeySetLearningProficiencyRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.LearningProficiencyRate, index, r => CheatSettingsClient.Instance().SetLearningProficiencyRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.LearningProficiencyRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetLearningProficiencyRate")]
     private static class TouchSetLearningProficiencyRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.LearningProficiencyRate, index, r => CheatSettingsClient.Instance().SetLearningProficiencyRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.LearningProficiencyRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetMagicProficiencyRate")]
     private static class KeySetMagicProficiencyRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicProficiencyRate, index, r => CheatSettingsClient.Instance().SetMagicProficiencyRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicProficiencyRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetMagicProficiencyRate")]
     private static class TouchSetMagicProficiencyRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicProficiencyRate, index, r => CheatSettingsClient.Instance().SetMagicProficiencyRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicProficiencyRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetParameterUpRate")]
     private static class KeySetParameterUpRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.ParameterUpRate, index, r => CheatSettingsClient.Instance().SetParameterUpRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.ParameterUpRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetParameterUpRate")]
     private static class TouchSetParameterUpRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.ParameterUpRate, index, r => CheatSettingsClient.Instance().SetParameterUpRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.ParameterUpRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SetMagicLearningProficiencyRate")]
     private static class KeySetMagicLearningProficiencyRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicLearningProficiencyRate, index, r => CheatSettingsClient.Instance().SetMagicLearningProficiencyRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicLearningProficiencyRate, index);
     }
 
     [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SetMagicLearningProficiencyRate")]
     private static class TouchSetMagicLearningProficiencyRate
     {
         private static bool Prefix(int index)
-            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicLearningProficiencyRate, index, r => CheatSettingsClient.Instance().SetMagicLearningProficiencyRate(r));
+            => BoostMenuHooks.ApplyRate(ConfigCommandType.MagicLearningProficiencyRate, index);
+    }
+
+    /// <summary>
+    /// Runs once the game has finished handling an arrow press on a Boost row.
+    /// <para>
+    /// EXP is the odd one out: instead of calling SetExpRate(int), the game converts the index
+    /// inline in SwitchArrowSelectTypeProcess with its own five-entry table and calls
+    /// CheatSettingsClient.SetExpRate itself. Index 5 and above therefore store 0, and the prefix on
+    /// SetExpRate(int) is never reached. Re-assert the multiplier the row is displaying, which is
+    /// a no-op for the rows the game already stored correctly.
+    /// </para>
+    /// </summary>
+    [HarmonyPatch(typeof(Last.UI.KeyInput.ConfigActualDetailsControllerBase), "SwitchArrowSelectTypeProcess")]
+    private static class KeyInputArrowRate
+    {
+        private static void Postfix(Last.UI.KeyInput.ConfigCommandController controller)
+        {
+            try
+            {
+                if (controller != null)
+                    BoostMenuHooks.ApplyStoredRate(controller.ConfigCommandsData, controller.targetIndex, "keyInput arrow");
+            }
+            catch
+            {
+                // Ignore.
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Last.UI.Touch.ConfigActualDetailsControllerBase), "SwitchArrowTypeProcess")]
+    private static class TouchArrowRate
+    {
+        private static void Postfix(Last.UI.Touch.ConfigCommandController controller)
+        {
+            try
+            {
+                if (controller != null)
+                    BoostMenuHooks.ApplyStoredRate(controller.ConfigCommandsData, controller.targetIndex, "touch arrow");
+            }
+            catch
+            {
+                // Ignore.
+            }
+        }
     }
 }

@@ -12,7 +12,7 @@ public sealed class BoostOptionsPlugin : BasePlugin
 {
     public const string PluginGuid = "com.lukahn.ff5.boostoptions";
     public const string PluginName = "FFV Boost Options";
-    public const string PluginVersion = "1.0.0";
+    public const string PluginVersion = "1.1.0";
 
     internal static ManualLogSource LogSource;
     internal static ConfigEntry<int> MaxMultiplier;

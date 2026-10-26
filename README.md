@@ -104,6 +104,11 @@ restrictive, so the mod works on the menu layer:
   row's option labels, keeping the game's localised text for the first four entries.
 * `Set*Rate(int index)` is driven straight into `CheatSettingsClient`, because the game's own helpers
   read past the end of a private five-entry table for custom indices and would store `0`.
+* The EXP row is the exception: it never calls `SetExpRate(int)`. The game inlines that conversion in
+  `ConfigActualDetailsControllerBase.SwitchArrowSelectTypeProcess` (`SwitchArrowTypeProcess` on the
+  touch path) and calls `CheatSettingsClient.SetExpRate` itself, so a postfix on those two methods
+  re-applies the multiplier the row is showing once the arrow press has been handled. Without it,
+  any value above `4x` was silently stored as `0`.
 
 All patches are applied to the native IL2CPP methods through BepInEx's Harmony detours, so no game
 files are modified.
